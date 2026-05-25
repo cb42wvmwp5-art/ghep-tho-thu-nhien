@@ -23,8 +23,7 @@ input[type="color"]::-webkit-color-swatch { border: 2px solid #e5e7eb; border-ra
 input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%; background: #2563eb; cursor: pointer; margin-top: -6px; }
 input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 8px; cursor: pointer; background: #e5e7eb; border-radius: 4px; }
 #pasteArea:empty:before { content: attr(placeholder); color: #9ca3af; pointer-events: none; }
-#pasteArea img { max-width: 100%; max-height: 100px; object-fit: contain; border-radius: 4px; margin: 0 auto; display: block; }
-textarea, input, #pasteArea { user-select: text; -webkit-user-select: text; }
+textarea, input { user-select: text; -webkit-user-select: text; }
 @media (max-width: 768px) {
 .mobile-fixed-bottom { position: fixed; bottom: 0; left: 0; right: 0; z-index: 50; border-radius: 0 !important; margin: 0 !important; box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1); }
 body { padding-bottom: 130px; }
@@ -53,20 +52,18 @@ body { padding-bottom: 130px; }
 <div>
 <label class="block text-sm font-bold text-blue-600 mb-2">1. Thêm ảnh</label>
 <div class="space-y-3">
-<!-- Cách 1: Nút chọn ảnh thiết kế mới cho iOS -->
-<div>
-<label for="imageLoader" class="w-full bg-blue-100 hover:bg-blue-200 text-blue-700 font-bold py-4 px-4 rounded-xl border-2 border-blue-300 flex items-center justify-center gap-2 cursor-pointer shadow-sm transition active:bg-blue-200">
-<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+<div class="bg-white border-2 border-dashed border-gray-300 rounded-lg p-3 text-center">
+<p class="text-xs text-gray-600 mb-2 font-medium">Nhấn giữ vào ô dưới và chọn "Dán"</p>
+<div id="pasteArea" contenteditable="true" placeholder="[ Nhấn giữ vào đây để dán ảnh ]" class="w-full min-h-[50px] bg-gray-50 border border-gray-200 rounded flex items-center justify-center text-sm text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:bg-white transition p-2 break-all overflow-hidden"></div>
+</div>
+<div class="relative overflow-hidden">
+<button class="w-full bg-blue-50 text-blue-700 font-semibold py-2 px-4 rounded-lg border border-blue-200 flex items-center justify-center gap-2">
+<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
 </svg>
-BẤM VÀO ĐÂY ĐỂ CHỌN ẢNH
-</label>
-<input type="file" id="imageLoader" accept="image/*" class="hidden">
-</div>
-<!-- Cách 2: Dán ảnh (Đã sửa lỗi iOS nhét thẻ img vào box) -->
-<div class="bg-white border-2 border-dashed border-gray-300 rounded-lg p-3 text-center">
-<p class="text-xs text-gray-600 mb-2 font-medium">Hoặc: Nhấn giữ vào ô dưới và chọn "Dán"</p>
-<div id="pasteArea" contenteditable="true" placeholder="[ Nhấn giữ vào đây để dán ảnh ]" class="w-full min-h-[50px] bg-gray-50 border border-gray-200 rounded flex flex-col items-center justify-center text-sm text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:bg-white transition p-2 overflow-hidden"></div>
+Chọn ảnh từ điện thoại
+</button>
+<input type="file" id="imageLoader" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
 </div>
 </div>
 </div>
@@ -94,10 +91,10 @@ Tác giả: Hàn Tấn
 </div>
 <div>
 <div class="flex justify-between mb-2">
-<span class="text-xs text-gray-500">Cỡ chữ</span>
+<span class="text-xs text-gray-500">Cỡ chữ (Auto đồng bộ)</span>
 <span id="fontSizeVal" class="text-xs font-bold text-blue-600">60px</span>
 </div>
-<input type="range" id="fontSize" min="20" max="200" value="60" class="w-full appearance-none bg-transparent">
+<input type="range" id="fontSize" min="15" max="400" value="60" class="w-full appearance-none bg-transparent">
 </div>
 </div>
 <div class="grid grid-cols-2 gap-4 pt-2">
@@ -109,13 +106,21 @@ Tác giả: Hàn Tấn
 <span class="text-xs text-gray-600 font-medium mb-1">Màu viền</span>
 <input type="color" id="shadowColor" value="#000000" class="cursor-pointer">
 </div>
+<div class="col-span-2">
+<button id="autoColorBtn" class="w-full bg-gray-100 active:bg-gray-200 text-gray-700 text-xs font-semibold py-2.5 rounded-lg border border-gray-300 flex items-center justify-center gap-2 transition">
+<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+</svg>
+Đọc màu ảnh & Tự động phối màu
+</button>
+</div>
 </div>
 <div>
 <div class="flex justify-between mb-2 mt-2">
-<span class="text-xs text-gray-500">Độ dày viền</span>
+<span class="text-xs text-gray-500">Độ dày viền (Auto đồng bộ)</span>
 <span id="shadowBlurVal" class="text-xs font-bold text-blue-600">12px</span>
 </div>
-<input type="range" id="shadowBlur" min="0" max="50" value="12" class="w-full appearance-none bg-transparent">
+<input type="range" id="shadowBlur" min="0" max="100" value="12" class="w-full appearance-none bg-transparent">
 </div>
 </div>
 <button id="downloadBtn" class="w-full bg-blue-600 active:bg-blue-800 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition duration-200 flex justify-center items-center gap-2 text-base mobile-fixed-bottom">
@@ -135,11 +140,15 @@ Lưu Ảnh Về Máy
 <script>
 if ('serviceWorker' in navigator) {
 window.addEventListener('load', () => {
-navigator.serviceWorker.register('./sw.js').catch(err => { console.log('Lỗi SW:', err); });
+navigator.serviceWorker.register('./sw.js').then(reg => {
+console.log('Đã đăng ký App thành công');
+}).catch(err => {
+console.log('Lỗi đăng ký:', err);
+});
 });
 }
 const canvas = document.getElementById('imageCanvas');
-const ctx = canvas.getContext('2d');
+const ctx = canvas.getContext('2d', { willReadFrequently: true });
 const imageLoader = document.getElementById('imageLoader');
 const pasteArea = document.getElementById('pasteArea');
 const poemText = document.getElementById('poemText');
@@ -152,26 +161,56 @@ const shadowBlurSlider = document.getElementById('shadowBlur');
 const shadowBlurVal = document.getElementById('shadowBlurVal');
 const downloadBtn = document.getElementById('downloadBtn');
 const placeholderText = document.getElementById('placeholder-text');
+const autoColorBtn = document.getElementById('autoColorBtn');
 let img = new Image();
 let isImageLoaded = false;
 let textX = 50; let textY = 50;
 let isDragging = false; let dragOffsetX = 0; let dragOffsetY = 0;
+function applyAutoColor() {
+if (!isImageLoaded) return;
+ctx.clearRect(0, 0, canvas.width, canvas.height);
+ctx.drawImage(img, 0, 0);
+try {
+const width = canvas.width; const height = canvas.height;
+const imageData = ctx.getImageData(0, 0, width, height);
+const data = imageData.data;
+let r = 0, g = 0, b = 0, count = 0;
+for (let i = 0; i < data.length; i += 4 * 40) {
+r += data[i]; g += data[i+1]; b += data[i+2]; count++;
+}
+if (count > 0) {
+r = Math.floor(r / count); g = Math.floor(g / count); b = Math.floor(b / count);
+const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+if (brightness < 128) {
+textColorInput.value = '#ffffff'; shadowColorInput.value = '#000000';
+} else {
+textColorInput.value = '#1a1a1a'; shadowColorInput.value = '#ffffff';
+}
+}
+} catch (e) { console.log("Lỗi đọc màu tự động"); }
+draw();
+}
+autoColorBtn.addEventListener('click', applyAutoColor);
 function initImageFromSrc(src) {
 img.onload = function() {
 canvas.width = img.width; canvas.height = img.height;
 isImageLoaded = true; placeholderText.style.display = 'none';
+let minEdge = Math.min(img.width, img.height);
+let autoFontSize = Math.floor(minEdge * 0.055);
+autoFontSize = Math.max(20, Math.min(autoFontSize, 400));
+fontSizeSlider.max = Math.max(200, Math.floor(minEdge * 0.15));
+fontSizeSlider.value = autoFontSize;
+fontSizeVal.innerText = autoFontSize + 'px';
+let autoBlur = Math.floor(autoFontSize * 0.2);
+shadowBlurSlider.value = autoBlur;
+shadowBlurVal.innerText = autoBlur + 'px';
 textX = img.width > img.height ? img.width * 0.5 : img.width * 0.1;
 textY = img.height * 0.1;
 window.scrollTo({ top: 0, behavior: 'smooth' });
-draw();
-};
-img.onerror = function() {
-alert("Lỗi tải ảnh. Vui lòng chọn định dạng ảnh khác (PNG, JPG).");
-pasteArea.innerHTML = "";
-};
+applyAutoColor();
+}
 img.src = src;
 }
-// TẢI ẢNH TỪ FILE INPUT
 imageLoader.addEventListener('change', function(e) {
 if(e.target.files && e.target.files[0]) {
 const reader = new FileReader();
@@ -179,36 +218,25 @@ reader.onload = function(event) { initImageFromSrc(event.target.result); }
 reader.readAsDataURL(e.target.files[0]);
 }
 });
-// BẮT SỰ KIỆN KHI IPHONE THẢ ẢNH VÀO PASTE AREA (Thay vì sự kiện paste)
-pasteArea.addEventListener('input', function() {
-const imgTags = pasteArea.getElementsByTagName('img');
-if(imgTags.length > 0) {
-// Lấy thẻ img đầu tiên iPhone nhét vào và vẽ lên canvas
-const imgSrc = imgTags[0].src;
-pasteArea.innerHTML = "<span class='text-green-600 font-bold'>Đã nhận ảnh thành công!</span>";
-initImageFromSrc(imgSrc);
-setTimeout(() => { pasteArea.innerHTML = ""; }, 2000);
-}
-});
-// XỬ LÝ SỰ KIỆN DÁN TIÊU CHUẨN KHI KHÔNG BỊ TRÌNH DUYỆT CHẶN
 pasteArea.addEventListener('paste', function(e) {
+e.preventDefault(); pasteArea.innerText = "Đang xử lý...";
 const items = (e.clipboardData || window.clipboardData).items;
 let imageFound = false;
 for (let index in items) {
 const item = items[index];
 if (item.kind === 'file' && item.type.startsWith('image/')) {
-e.preventDefault();
 const blob = item.getAsFile();
 const reader = new FileReader();
 reader.onload = function(event) {
 initImageFromSrc(event.target.result);
-pasteArea.innerHTML = "<span class='text-green-600 font-bold'>Đã dán ảnh!</span>";
-setTimeout(() => { pasteArea.innerHTML = ""; }, 2000);
+pasteArea.innerText = "Đã dán ảnh!";
+setTimeout(() => { pasteArea.innerText = ""; }, 2000);
 }
 reader.readAsDataURL(blob);
 imageFound = true; break;
 }
 }
+if (!imageFound) { pasteArea.innerText = "Không tìm thấy ảnh!"; setTimeout(() => { pasteArea.innerText = ""; }, 2000); }
 });
 window.addEventListener('paste', function(e) {
 if(e.target !== pasteArea && e.target !== poemText) {
