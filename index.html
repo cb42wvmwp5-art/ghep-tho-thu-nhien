@@ -23,15 +23,16 @@ input[type="color"]::-webkit-color-swatch { border: 2px solid #e5e7eb; border-ra
 input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%; background: #2563eb; cursor: pointer; margin-top: -6px; }
 input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 8px; cursor: pointer; background: #e5e7eb; border-radius: 4px; }
 #pasteArea:empty:before { content: attr(placeholder); color: #9ca3af; pointer-events: none; }
-textarea, input { user-select: text; -webkit-user-select: text; }
+#pasteArea img { max-width: 100%; max-height: 100px; object-fit: contain; border-radius: 4px; margin: 0 auto; display: block; }
+textarea, input, #pasteArea { user-select: text; -webkit-user-select: text; }
 @media (max-width: 768px) {
 .mobile-fixed-bottom { position: fixed; bottom: 0; left: 0; right: 0; z-index: 50; border-radius: 0 !important; margin: 0 !important; box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1); }
-body { padding-bottom: 90px; }
+body { padding-bottom: 130px; }
 }
 </style>
 </head>
 <body class="p-2 md:p-8 relative min-h-screen flex flex-col">
-<div class="max-w-7xl mx-auto bg-white rounded-xl shadow-lg p-4 md:p-6 mb-8 flex-grow w-full">
+<div class="max-w-7xl mx-auto bg-white rounded-xl shadow-lg p-4 md:p-6 mb-4 flex-grow w-full">
 <h1 class="text-xl md:text-3xl font-bold text-gray-800 mb-4 text-center">Ghép Thơ Lên Ảnh</h1>
 <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
 <div class="lg:col-span-8 flex flex-col order-1 lg:order-2">
@@ -42,7 +43,7 @@ body { padding-bottom: 90px; }
 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
 </svg>
 <p class="text-base font-medium">Chưa có ảnh</p>
-<p class="text-xs mt-1">Sử dụng công cụ bên dưới để dán ảnh</p>
+<p class="text-xs mt-1">Sử dụng công cụ bên dưới để thêm ảnh</p>
 </div>
 <canvas id="imageCanvas"></canvas>
 </div>
@@ -52,18 +53,20 @@ body { padding-bottom: 90px; }
 <div>
 <label class="block text-sm font-bold text-blue-600 mb-2">1. Thêm ảnh</label>
 <div class="space-y-3">
-<div class="bg-white border-2 border-dashed border-gray-300 rounded-lg p-3 text-center">
-<p class="text-xs text-gray-600 mb-2 font-medium">Nhấn giữ vào ô dưới và chọn "Dán"</p>
-<div id="pasteArea" contenteditable="true" placeholder="[ Nhấn giữ vào đây để dán ảnh ]" class="w-full min-h-[50px] bg-gray-50 border border-gray-200 rounded flex items-center justify-center text-sm text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:bg-white transition p-2 break-all overflow-hidden"></div>
-</div>
-<div class="relative overflow-hidden">
-<button class="w-full bg-blue-50 text-blue-700 font-semibold py-2 px-4 rounded-lg border border-blue-200 flex items-center justify-center gap-2">
-<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+<!-- Cách 1: Nút chọn ảnh thiết kế mới cho iOS -->
+<div>
+<label for="imageLoader" class="w-full bg-blue-100 hover:bg-blue-200 text-blue-700 font-bold py-4 px-4 rounded-xl border-2 border-blue-300 flex items-center justify-center gap-2 cursor-pointer shadow-sm transition active:bg-blue-200">
+<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
 </svg>
-Chọn ảnh từ điện thoại
-</button>
-<input type="file" id="imageLoader" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+BẤM VÀO ĐÂY ĐỂ CHỌN ẢNH
+</label>
+<input type="file" id="imageLoader" accept="image/*" class="hidden">
+</div>
+<!-- Cách 2: Dán ảnh (Đã sửa lỗi iOS nhét thẻ img vào box) -->
+<div class="bg-white border-2 border-dashed border-gray-300 rounded-lg p-3 text-center">
+<p class="text-xs text-gray-600 mb-2 font-medium">Hoặc: Nhấn giữ vào ô dưới và chọn "Dán"</p>
+<div id="pasteArea" contenteditable="true" placeholder="[ Nhấn giữ vào đây để dán ảnh ]" class="w-full min-h-[50px] bg-gray-50 border border-gray-200 rounded flex flex-col items-center justify-center text-sm text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:bg-white transition p-2 overflow-hidden"></div>
 </div>
 </div>
 </div>
@@ -115,7 +118,7 @@ Tác giả: Hàn Tấn
 <input type="range" id="shadowBlur" min="0" max="50" value="12" class="w-full appearance-none bg-transparent">
 </div>
 </div>
-<button id="downloadBtn" class="w-full bg-blue-600 active:bg-blue-800 text-white font-bold py-4 px-4 rounded-xl shadow-lg transition duration-200 flex justify-center items-center gap-2 text-lg mobile-fixed-bottom">
+<button id="downloadBtn" class="w-full bg-blue-600 active:bg-blue-800 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition duration-200 flex justify-center items-center gap-2 text-base mobile-fixed-bottom">
 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
 </svg>
@@ -124,20 +127,15 @@ Lưu Ảnh Về Máy
 </div>
 </div>
 </div>
-<footer class="text-center pb-6 mt-auto">
-<p class="text-gray-500 font-medium font-serif italic text-base">
+<footer class="text-center pb-8 mt-auto z-10 relative">
+<p class="text-gray-600 font-medium font-serif italic text-base">
 ✿ Tác giả: Thu Nhiên ✿
 </p>
 </footer>
 <script>
-// ĐĂNG KÝ SERVICE WORKER (Bắt buộc cho PWA)
 if ('serviceWorker' in navigator) {
 window.addEventListener('load', () => {
-navigator.serviceWorker.register('./sw.js').then(reg => {
-console.log('Đã đăng ký App thành công', reg);
-}).catch(err => {
-console.log('Lỗi đăng ký:', err);
-});
+navigator.serviceWorker.register('./sw.js').catch(err => { console.log('Lỗi SW:', err); });
 });
 }
 const canvas = document.getElementById('imageCanvas');
@@ -166,9 +164,14 @@ textX = img.width > img.height ? img.width * 0.5 : img.width * 0.1;
 textY = img.height * 0.1;
 window.scrollTo({ top: 0, behavior: 'smooth' });
 draw();
-}
+};
+img.onerror = function() {
+alert("Lỗi tải ảnh. Vui lòng chọn định dạng ảnh khác (PNG, JPG).");
+pasteArea.innerHTML = "";
+};
 img.src = src;
 }
+// TẢI ẢNH TỪ FILE INPUT
 imageLoader.addEventListener('change', function(e) {
 if(e.target.files && e.target.files[0]) {
 const reader = new FileReader();
@@ -176,25 +179,36 @@ reader.onload = function(event) { initImageFromSrc(event.target.result); }
 reader.readAsDataURL(e.target.files[0]);
 }
 });
+// BẮT SỰ KIỆN KHI IPHONE THẢ ẢNH VÀO PASTE AREA (Thay vì sự kiện paste)
+pasteArea.addEventListener('input', function() {
+const imgTags = pasteArea.getElementsByTagName('img');
+if(imgTags.length > 0) {
+// Lấy thẻ img đầu tiên iPhone nhét vào và vẽ lên canvas
+const imgSrc = imgTags[0].src;
+pasteArea.innerHTML = "<span class='text-green-600 font-bold'>Đã nhận ảnh thành công!</span>";
+initImageFromSrc(imgSrc);
+setTimeout(() => { pasteArea.innerHTML = ""; }, 2000);
+}
+});
+// XỬ LÝ SỰ KIỆN DÁN TIÊU CHUẨN KHI KHÔNG BỊ TRÌNH DUYỆT CHẶN
 pasteArea.addEventListener('paste', function(e) {
-e.preventDefault(); pasteArea.innerText = "Đang xử lý...";
 const items = (e.clipboardData || window.clipboardData).items;
 let imageFound = false;
 for (let index in items) {
 const item = items[index];
 if (item.kind === 'file' && item.type.startsWith('image/')) {
+e.preventDefault();
 const blob = item.getAsFile();
 const reader = new FileReader();
 reader.onload = function(event) {
 initImageFromSrc(event.target.result);
-pasteArea.innerText = "Đã dán ảnh!";
-setTimeout(() => { pasteArea.innerText = ""; }, 2000);
+pasteArea.innerHTML = "<span class='text-green-600 font-bold'>Đã dán ảnh!</span>";
+setTimeout(() => { pasteArea.innerHTML = ""; }, 2000);
 }
 reader.readAsDataURL(blob);
 imageFound = true; break;
 }
 }
-if (!imageFound) { pasteArea.innerText = "Không tìm thấy ảnh!"; setTimeout(() => { pasteArea.innerText = ""; }, 2000); }
 });
 window.addEventListener('paste', function(e) {
 if(e.target !== pasteArea && e.target !== poemText) {
