@@ -23,11 +23,15 @@ input[type="color"]::-webkit-color-swatch { border: 2px solid #e5e7eb; border-ra
 input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%; background: #2563eb; cursor: pointer; margin-top: -6px; }
 input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 8px; cursor: pointer; background: #e5e7eb; border-radius: 4px; }
 #pasteArea:empty:before { content: attr(placeholder); color: #9ca3af; pointer-events: none; }
+#pasteArea img { max-width: 100%; max-height: 100px; object-fit: contain; border-radius: 4px; opacity: 0.5; }
 textarea, input { user-select: text; -webkit-user-select: text; }
 @media (max-width: 768px) {
 .mobile-fixed-bottom { position: fixed; bottom: 0; left: 0; right: 0; z-index: 50; border-radius: 0 !important; margin: 0 !important; box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1); }
 body { padding-bottom: 130px; }
 }
+#loading-overlay { display: none; position: absolute; inset: 0; background: rgba(255,255,255,0.8); z-index: 20; flex-direction: column; justify-content: center; align-items: center; border-radius: 0.5rem; }
+.spinner { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 </style>
 </head>
 <body class="p-2 md:p-8 relative min-h-screen flex flex-col">
@@ -44,6 +48,10 @@ body { padding-bottom: 130px; }
 <p class="text-base font-medium">Chưa có ảnh</p>
 <p class="text-xs mt-1">Sử dụng công cụ bên dưới để thêm ảnh</p>
 </div>
+<div id="loading-overlay">
+<div class="spinner mb-3"></div>
+<p class="text-sm font-bold text-blue-600">Đang xử lý ảnh...</p>
+</div>
 <canvas id="imageCanvas"></canvas>
 </div>
 <p class="text-xs text-gray-500 mt-2 text-center">Mẹo: Vuốt bên ngoài vùng chữ để cuộn màn hình.</p>
@@ -54,16 +62,16 @@ body { padding-bottom: 130px; }
 <div class="space-y-3">
 <div class="bg-white border-2 border-dashed border-gray-300 rounded-lg p-3 text-center">
 <p class="text-xs text-gray-600 mb-2 font-medium">Nhấn giữ vào ô dưới và chọn "Dán"</p>
-<div id="pasteArea" contenteditable="true" placeholder="[ Nhấn giữ vào đây để dán ảnh ]" class="w-full min-h-[50px] bg-gray-50 border border-gray-200 rounded flex items-center justify-center text-sm text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:bg-white transition p-2 break-all overflow-hidden"></div>
+<div id="pasteArea" contenteditable="true" placeholder="[ Nhấn giữ vào đây để dán ảnh ]" class="w-full min-h-[50px] bg-gray-50 border border-gray-200 rounded flex flex-col items-center justify-center text-sm text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:bg-white transition p-2 break-all overflow-hidden"></div>
 </div>
-<div class="relative overflow-hidden">
-<button class="w-full bg-blue-50 text-blue-700 font-semibold py-2 px-4 rounded-lg border border-blue-200 flex items-center justify-center gap-2">
+<div>
+<label class="w-full bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold py-3 px-4 rounded-lg border border-blue-200 flex items-center justify-center gap-2 cursor-pointer transition">
 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
 </svg>
-Chọn ảnh từ điện thoại
-</button>
-<input type="file" id="imageLoader" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+<span>Chọn ảnh từ điện thoại</span>
+<input type="file" id="imageLoader" accept="image/*" class="hidden">
+</label>
 </div>
 </div>
 </div>
@@ -140,9 +148,7 @@ Lưu Ảnh Về Máy
 <script>
 if ('serviceWorker' in navigator) {
 window.addEventListener('load', () => {
-navigator.serviceWorker.register('./sw.js').then(reg => {
-console.log('Đã đăng ký App thành công');
-}).catch(err => {
+navigator.serviceWorker.register('./sw.js').catch(err => {
 console.log('Lỗi đăng ký:', err);
 });
 });
@@ -162,18 +168,38 @@ const shadowBlurVal = document.getElementById('shadowBlurVal');
 const downloadBtn = document.getElementById('downloadBtn');
 const placeholderText = document.getElementById('placeholder-text');
 const autoColorBtn = document.getElementById('autoColorBtn');
+const loadingOverlay = document.getElementById('loading-overlay');
 let img = new Image();
 let isImageLoaded = false;
 let textX = 50; let textY = 50;
 let isDragging = false; let dragOffsetX = 0; let dragOffsetY = 0;
+// Hàm xử lý kích thước ảnh để iPhone không bị "quá tải"
+function resizeImage(base64Str, maxWidth = 1600, maxHeight = 1600) {
+return new Promise((resolve) => {
+let tempImg = new Image();
+tempImg.onload = () => {
+let width = tempImg.width;
+let height = tempImg.height;
+if (width > maxWidth || height > maxHeight) {
+const ratio = Math.min(maxWidth / width, maxHeight / height);
+width = Math.round(width * ratio);
+height = Math.round(height * ratio);
+}
+let tempCanvas = document.createElement('canvas');
+tempCanvas.width = width; tempCanvas.height = height;
+tempCanvas.getContext('2d').drawImage(tempImg, 0, 0, width, height);
+resolve(tempCanvas.toDataURL('image/jpeg', 0.85));
+};
+tempImg.src = base64Str;
+});
+}
 function applyAutoColor() {
 if (!isImageLoaded) return;
 ctx.clearRect(0, 0, canvas.width, canvas.height);
 ctx.drawImage(img, 0, 0);
 try {
 const width = canvas.width; const height = canvas.height;
-const imageData = ctx.getImageData(0, 0, width, height);
-const data = imageData.data;
+const data = ctx.getImageData(0, 0, width, height).data;
 let r = 0, g = 0, b = 0, count = 0;
 for (let i = 0; i < data.length; i += 4 * 40) {
 r += data[i]; g += data[i+1]; b += data[i+2]; count++;
@@ -187,14 +213,21 @@ textColorInput.value = '#ffffff'; shadowColorInput.value = '#000000';
 textColorInput.value = '#1a1a1a'; shadowColorInput.value = '#ffffff';
 }
 }
-} catch (e) { console.log("Lỗi đọc màu tự động"); }
+} catch (e) {}
 draw();
 }
 autoColorBtn.addEventListener('click', applyAutoColor);
-function initImageFromSrc(src) {
+// Hàm chính thức nạp ảnh lên Canvas
+async function loadAndDrawImage(srcData) {
+loadingOverlay.style.display = 'flex';
+try {
+const resizedData = await resizeImage(srcData);
 img.onload = function() {
 canvas.width = img.width; canvas.height = img.height;
-isImageLoaded = true; placeholderText.style.display = 'none';
+isImageLoaded = true;
+placeholderText.style.display = 'none';
+loadingOverlay.style.display = 'none';
+pasteArea.innerHTML = ''; // Làm sạch ô Paste
 let minEdge = Math.min(img.width, img.height);
 let autoFontSize = Math.floor(minEdge * 0.055);
 autoFontSize = Math.max(20, Math.min(autoFontSize, 400));
@@ -209,46 +242,68 @@ textY = img.height * 0.1;
 window.scrollTo({ top: 0, behavior: 'smooth' });
 applyAutoColor();
 }
-img.src = src;
+img.src = resizedData;
+} catch (e) {
+loadingOverlay.style.display = 'none';
+alert("Lỗi xử lý ảnh, vui lòng thử lại!");
 }
+}
+// Chọn file từ máy
 imageLoader.addEventListener('change', function(e) {
 if(e.target.files && e.target.files[0]) {
 const reader = new FileReader();
-reader.onload = function(event) { initImageFromSrc(event.target.result); }
+reader.onload = function(event) { loadAndDrawImage(event.target.result); }
 reader.readAsDataURL(e.target.files[0]);
+e.target.value = '';
 }
 });
+// XỬ LÝ SỰ KIỆN DÁN (Tối ưu tuyệt đối cho iPhone)
 pasteArea.addEventListener('paste', function(e) {
-e.preventDefault(); pasteArea.innerText = "Đang xử lý...";
 const items = (e.clipboardData || window.clipboardData).items;
-let imageFound = false;
-for (let index in items) {
-const item = items[index];
-if (item.kind === 'file' && item.type.startsWith('image/')) {
-const blob = item.getAsFile();
+let fileFound = false;
+// Cách 1: Thử lấy file theo cách chuẩn
+if (items) {
+for (let i = 0; i < items.length; i++) {
+if (items[i].type.indexOf('image') !== -1) {
+e.preventDefault();
+const blob = items[i].getAsFile();
 const reader = new FileReader();
-reader.onload = function(event) {
-initImageFromSrc(event.target.result);
-pasteArea.innerText = "Đã dán ảnh!";
-setTimeout(() => { pasteArea.innerText = ""; }, 2000);
-}
+reader.onload = function(event) { loadAndDrawImage(event.target.result); }
 reader.readAsDataURL(blob);
-imageFound = true; break;
+fileFound = true;
+break;
 }
 }
-if (!imageFound) { pasteArea.innerText = "Không tìm thấy ảnh!"; setTimeout(() => { pasteArea.innerText = ""; }, 2000); }
+}
+// Cách 2 (Cứu cánh cho iPhone): Nếu iPhone tự chèn ảnh HTML vào thẻ div, ta đợi 0.1s rồi bắt lấy nó
+if (!fileFound) {
+loadingOverlay.style.display = 'flex';
+setTimeout(() => {
+const imgElement = pasteArea.querySelector('img');
+if (imgElement && imgElement.src) {
+// Tìm thấy ảnh iPhone vừa chèn! Xử lý ngay!
+loadAndDrawImage(imgElement.src);
+} else {
+// Thực sự không có ảnh nào
+loadingOverlay.style.display = 'none';
+pasteArea.innerText = "Không tìm thấy ảnh. Vui lòng copy lại ảnh!";
+setTimeout(() => { pasteArea.innerHTML = ""; }, 2000);
+}
+}, 100); // Chờ 100ms để trình duyệt kịp vẽ HTML
+}
 });
+// Hỗ trợ dán phím tắt trên PC
 window.addEventListener('paste', function(e) {
 if(e.target !== pasteArea && e.target !== poemText) {
 const items = (e.clipboardData || e.originalEvent.clipboardData).items;
-for (let index in items) {
-const item = items[index];
-if (item.kind === 'file' && item.type.startsWith('image/')) {
-const blob = item.getAsFile();
+for (let i = 0; i < items.length; i++) {
+if (items[i].type.indexOf('image') !== -1) {
+e.preventDefault();
+const blob = items[i].getAsFile();
 const reader = new FileReader();
-reader.onload = function(event) { initImageFromSrc(event.target.result); }
+reader.onload = function(event) { loadAndDrawImage(event.target.result); }
 reader.readAsDataURL(blob);
-e.preventDefault(); break;
+break;
 }
 }
 }
